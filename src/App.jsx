@@ -3,6 +3,7 @@ import Scanner from './components/Scanner';
 import Progress from './components/Progress';
 import ImagePair from './components/ImagePair';
 import Stats from './components/Stats';
+import MediaModal from './components/MediaModal';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:8000';
@@ -14,6 +15,8 @@ function App() {
   const [duplicates, setDuplicates] = useState([]);
   const [totalSavings, setTotalSavings] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState(new Set());
+  const [modalFile, setModalFile] = useState(null);
 
   const handleScanStart = (path, threshold) => {
     setIsScanning(true);
@@ -50,6 +53,64 @@ function App() {
     await loadDuplicates();
   };
 
+  const handleFileSelect = (filePath, isSelected) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(filePath);
+      } else {
+        newSet.delete(filePath);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedFiles.size === 0) {
+      alert('No hay archivos seleccionados');
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de que quieres eliminar ${selectedFiles.size} archivo(s) seleccionado(s)?`)) {
+      return;
+    }
+
+    setLoading(true);
+    let deletedCount = 0;
+    let errors = [];
+
+    for (const filePath of selectedFiles) {
+      try {
+        await axios.post(`${API_URL}/api/delete`, {
+          file_path: filePath,
+          scan_base_path: scanBasePath
+        });
+        deletedCount++;
+      } catch (err) {
+        errors.push(`${filePath}: ${err.response?.data?.detail || err.message}`);
+      }
+    }
+
+    setSelectedFiles(new Set());
+    setLoading(false);
+
+    if (errors.length > 0) {
+      alert(`Eliminados: ${deletedCount}\nErrores: ${errors.length}\n\n${errors.slice(0, 5).join('\n')}`);
+    } else {
+      alert(`${deletedCount} archivo(s) eliminado(s) exitosamente`);
+    }
+
+    await loadDuplicates();
+  };
+
+  const handleOpenModal = (file) => {
+    setModalFile(file);
+  };
+
+  const handleCloseModal = () => {
+    setModalFile(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-8">
       <div className="container mx-auto px-4 max-w-7xl">
@@ -77,7 +138,7 @@ function App() {
         {/* Results Summary */}
         {!isScanning && duplicates.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h3 className="text-xl font-bold text-gray-800">
                   {duplicates.length} par{duplicates.length !== 1 ? 'es' : ''} de duplicados encontrado{duplicates.length !== 1 ? 's' : ''}
@@ -87,13 +148,30 @@ function App() {
                     {totalSavings.toFixed(2)} MB
                   </span>
                 </p>
+                {selectedFiles.size > 0 && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    {selectedFiles.size} archivo(s) seleccionado(s)
+                  </p>
+                )}
               </div>
-              <button
-                onClick={loadDuplicates}
-                className="bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Actualizar Resultados
-              </button>
+              <div className="flex gap-2">
+                {selectedFiles.size > 0 && (
+                  <button
+                    onClick={handleDeleteSelected}
+                    disabled={loading}
+                    className="bg-red-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Eliminar Seleccionados ({selectedFiles.size})
+                  </button>
+                )}
+                <button
+                  onClick={loadDuplicates}
+                  disabled={loading}
+                  className="bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  Actualizar Resultados
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -131,6 +209,9 @@ function App() {
                 pair={pair}
                 basePath={scanBasePath}
                 onDelete={handleDelete}
+                selectedFiles={selectedFiles}
+                onFileSelect={handleFileSelect}
+                onOpenModal={handleOpenModal}
               />
             ))}
           </div>
@@ -142,6 +223,11 @@ function App() {
           <p className="mt-1">Todas las operaciones se realizan localmente en tu computadora</p>
         </div>
       </div>
+
+      {/* Media Modal */}
+      {modalFile && (
+        <MediaModal file={modalFile} onClose={handleCloseModal} />
+      )}
     </div>
   );
 }

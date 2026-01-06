@@ -4,9 +4,12 @@ import FileInfo from './FileInfo';
 
 const API_URL = 'http://localhost:8000';
 
-export default function ImagePair({ pair, basePath, onDelete }) {
+export default function ImagePair({ pair, basePath, onDelete, selectedFiles, onFileSelect, onOpenModal }) {
   const [deleting, setDeleting] = useState(null);
   const [error, setError] = useState('');
+
+  const isFile1Selected = selectedFiles?.has(pair.file1.path) || false;
+  const isFile2Selected = selectedFiles?.has(pair.file2.path) || false;
 
   const handleDelete = async (filePath, pairIndex) => {
     if (!confirm(`¿Estás seguro de que quieres eliminar este archivo?\n\n${filePath}`)) {
@@ -64,7 +67,31 @@ export default function ImagePair({ pair, basePath, onDelete }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* File 1 */}
         <div className="border border-gray-200 rounded-lg p-4">
-          <div className="mb-4 bg-gray-100 rounded-lg flex items-center justify-center" style={{ minHeight: '200px' }}>
+          {/* Selection checkbox */}
+          {onFileSelect && (
+            <div className="mb-3 flex items-center">
+              <input
+                type="checkbox"
+                id={`select-file1-${pair.file1.path}`}
+                checked={isFile1Selected}
+                onChange={(e) => onFileSelect(pair.file1.path, e.target.checked)}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+              <label
+                htmlFor={`select-file1-${pair.file1.path}`}
+                className="ml-2 text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                Seleccionar para eliminar
+              </label>
+            </div>
+          )}
+
+          <div
+            className="mb-4 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+            style={{ minHeight: '200px' }}
+            onClick={() => onOpenModal && onOpenModal(pair.file1)}
+            title="Click para ver en tamaño completo"
+          >
             {pair.file1.file_type === 'image' ? (
               <img
                 src={getImageUrl(pair.file1.path)}
@@ -78,12 +105,12 @@ export default function ImagePair({ pair, basePath, onDelete }) {
             ) : (
               <video
                 src={getImageUrl(pair.file1.path)}
-                controls
                 className="max-w-full max-h-64"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
                 Tu navegador no soporta la reproducción de video.
               </video>
@@ -110,7 +137,31 @@ export default function ImagePair({ pair, basePath, onDelete }) {
 
         {/* File 2 */}
         <div className="border border-gray-200 rounded-lg p-4">
-          <div className="mb-4 bg-gray-100 rounded-lg flex items-center justify-center" style={{ minHeight: '200px' }}>
+          {/* Selection checkbox */}
+          {onFileSelect && (
+            <div className="mb-3 flex items-center">
+              <input
+                type="checkbox"
+                id={`select-file2-${pair.file2.path}`}
+                checked={isFile2Selected}
+                onChange={(e) => onFileSelect(pair.file2.path, e.target.checked)}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+              <label
+                htmlFor={`select-file2-${pair.file2.path}`}
+                className="ml-2 text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                Seleccionar para eliminar
+              </label>
+            </div>
+          )}
+
+          <div
+            className="mb-4 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+            style={{ minHeight: '200px' }}
+            onClick={() => onOpenModal && onOpenModal(pair.file2)}
+            title="Click para ver en tamaño completo"
+          >
             {pair.file2.file_type === 'image' ? (
               <img
                 src={getImageUrl(pair.file2.path)}
@@ -124,12 +175,12 @@ export default function ImagePair({ pair, basePath, onDelete }) {
             ) : (
               <video
                 src={getImageUrl(pair.file2.path)}
-                controls
                 className="max-w-full max-h-64"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
                 Tu navegador no soporta la reproducción de video.
               </video>
