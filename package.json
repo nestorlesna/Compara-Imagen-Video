@@ -1,7 +1,13 @@
 {
-  "name": "temp-project",
+  "name": "detector-duplicados-imagenes-videos",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Detector de imágenes y videos duplicados usando hashing perceptual",
+  "author": "Nestor Lesna",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nestorlesna/Compara-Imagen-Video.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
