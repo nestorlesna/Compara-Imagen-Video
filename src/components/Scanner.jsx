@@ -4,7 +4,7 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8000';
 
 export default function Scanner({ onScanComplete }) {
-  const [folderPath, setFolderPath] = useState('');
+  const [folderPath, setFolderPath] = useState('C:\\DATOS\\FOTOS');
   const [threshold, setThreshold] = useState(5);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
