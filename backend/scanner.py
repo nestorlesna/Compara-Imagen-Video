@@ -68,12 +68,26 @@ class FileScanner:
     """Scanner for finding and processing image/video files"""
 
     @staticmethod
-    def find_files(directory: Path) -> List[Path]:
-        """Recursively find all supported files in directory"""
+    def find_files(directory: Path, file_type: str = 'both') -> List[Path]:
+        """Recursively find all supported files in directory
+
+        Args:
+            directory: Path to scan
+            file_type: 'image', 'video', or 'both'
+        """
         files = []
+
+        # Determine which extensions to look for
+        if file_type == 'image':
+            allowed_extensions = IMAGE_EXTENSIONS
+        elif file_type == 'video':
+            allowed_extensions = VIDEO_EXTENSIONS
+        else:  # both
+            allowed_extensions = SUPPORTED_EXTENSIONS
+
         try:
             for item in directory.rglob('*'):
-                if item.is_file() and item.suffix.lower() in SUPPORTED_EXTENSIONS:
+                if item.is_file() and item.suffix.lower() in allowed_extensions:
                     # Check file size
                     size_mb = item.stat().st_size / (1024 * 1024)
                     if size_mb <= MAX_FILE_SIZE_MB:
@@ -209,8 +223,13 @@ class FileScanner:
             return None
 
     @staticmethod
-    async def scan_directory(directory: str) -> Dict:
-        """Scan directory recursively and process all files"""
+    async def scan_directory(directory: str, file_type: str = 'both') -> Dict:
+        """Scan directory recursively and process all files
+
+        Args:
+            directory: Directory path to scan
+            file_type: 'image', 'video', or 'both'
+        """
         global scan_status
 
         if scan_status.is_scanning:
@@ -223,10 +242,10 @@ class FileScanner:
 
         try:
             dir_path = Path(directory)
-            logger.info(f"Starting scan of {directory}")
+            logger.info(f"Starting scan of {directory} (file_type: {file_type})")
 
             # Find all files
-            files = FileScanner.find_files(dir_path)
+            files = FileScanner.find_files(dir_path, file_type)
             scan_status.total_files = len(files)
             logger.info(f"Found {len(files)} files to process")
 

@@ -16,6 +16,10 @@ class ScanRequest(BaseModel):
         le=15,
         description="Hamming distance threshold (0=identical, 15=very different)"
     )
+    file_type: str = Field(
+        default='both',
+        description="Type of files to scan: 'image', 'video', or 'both'"
+    )
 
     @field_validator('path')
     @classmethod
@@ -26,6 +30,13 @@ class ScanRequest(BaseModel):
         if not p.is_dir():
             raise ValueError(f"Path is not a directory: {v}")
         return str(p.resolve())
+
+    @field_validator('file_type')
+    @classmethod
+    def validate_file_type(cls, v):
+        if v not in ['image', 'video', 'both']:
+            raise ValueError("file_type must be 'image', 'video', or 'both'")
+        return v
 
 
 class FileInfo(BaseModel):

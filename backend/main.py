@@ -87,7 +87,7 @@ async def start_scan(request: ScanRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {request.path}")
 
     # Start scan in background
-    background_tasks.add_task(FileScanner.scan_directory, request.path)
+    background_tasks.add_task(FileScanner.scan_directory, request.path, request.file_type)
 
     # Return initial status
     return ScanStatus(

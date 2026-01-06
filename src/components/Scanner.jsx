@@ -6,6 +6,7 @@ const API_URL = 'http://localhost:8000';
 export default function Scanner({ onScanComplete }) {
   const [folderPath, setFolderPath] = useState('C:\\DATOS\\FOTOS');
   const [threshold, setThreshold] = useState(5);
+  const [fileType, setFileType] = useState('both');
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
 
@@ -21,7 +22,8 @@ export default function Scanner({ onScanComplete }) {
     try {
       await axios.post(`${API_URL}/api/scan`, {
         path: folderPath,
-        similarity_threshold: threshold
+        similarity_threshold: threshold,
+        file_type: fileType
       });
 
       if (onScanComplete) {
@@ -52,6 +54,53 @@ export default function Scanner({ onScanComplete }) {
           />
           <p className="mt-1 text-sm text-gray-500">
             Ingresa la ruta completa de la carpeta que deseas escanear (incluye subcarpetas)
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tipo de Archivo
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="fileType"
+                value="both"
+                checked={fileType === 'both'}
+                onChange={(e) => setFileType(e.target.value)}
+                disabled={isScanning}
+                className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Ambos</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="fileType"
+                value="image"
+                checked={fileType === 'image'}
+                onChange={(e) => setFileType(e.target.value)}
+                disabled={isScanning}
+                className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Solo Imágenes</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="fileType"
+                value="video"
+                checked={fileType === 'video'}
+                onChange={(e) => setFileType(e.target.value)}
+                disabled={isScanning}
+                className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Solo Videos</span>
+            </label>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Selecciona qué tipo de archivos deseas buscar
           </p>
         </div>
 
