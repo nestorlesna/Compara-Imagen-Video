@@ -54,7 +54,7 @@ class ImageComparator:
         )
 
     @staticmethod
-    async def find_duplicates(similarity_threshold: int = 5) -> List[DuplicatePair]:
+    async def find_duplicates(similarity_threshold: int = 5, file_type: str = 'both') -> List[DuplicatePair]:
         """
         Find all duplicate/similar pairs based on perceptual hash similarity
 
@@ -64,14 +64,15 @@ class ImageComparator:
                                 5 = very similar (default)
                                 10 = somewhat similar
                                 15 = loosely similar
+            file_type: Type of files to compare ('image', 'video', or 'both')
 
         Returns:
             List of DuplicatePair objects
         """
-        logger.info(f"Finding duplicates with threshold={similarity_threshold}")
+        logger.info(f"Finding duplicates with threshold={similarity_threshold}, file_type={file_type}")
 
-        # Get all files with hashes
-        files = await db.get_files_with_hashes()
+        # Get all files with hashes, filtered by type
+        files = await db.get_files_with_hashes(file_type=file_type)
         logger.info(f"Comparing {len(files)} files")
 
         pairs = []

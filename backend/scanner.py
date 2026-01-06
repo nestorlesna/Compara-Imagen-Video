@@ -28,6 +28,7 @@ class ScanStatus:
     def __init__(self):
         self.is_scanning = False
         self.scanned_path: Optional[str] = None
+        self.file_type: str = 'both'
         self.total_files = 0
         self.processed_files = 0
         self.current_file: Optional[str] = None
@@ -39,6 +40,7 @@ class ScanStatus:
         """Reset status for new scan"""
         self.is_scanning = False
         self.scanned_path = None
+        self.file_type = 'both'
         self.total_files = 0
         self.processed_files = 0
         self.current_file = None
@@ -51,6 +53,7 @@ class ScanStatus:
         return {
             'is_scanning': self.is_scanning,
             'scanned_path': self.scanned_path,
+            'file_type': self.file_type,
             'total_files': self.total_files,
             'processed_files': self.processed_files,
             'current_file': self.current_file,
@@ -223,12 +226,13 @@ class FileScanner:
             return None
 
     @staticmethod
-    async def scan_directory(directory: str, file_type: str = 'both') -> Dict:
+    async def scan_directory(directory: str, file_type: str = 'both', clear_cache: bool = True) -> Dict:
         """Scan directory recursively and process all files
 
         Args:
             directory: Directory path to scan
             file_type: 'image', 'video', or 'both'
+            clear_cache: Clear database cache before scanning
         """
         global scan_status
 
@@ -238,11 +242,17 @@ class FileScanner:
         scan_status.reset()
         scan_status.is_scanning = True
         scan_status.scanned_path = directory
+        scan_status.file_type = file_type
         scan_status.start_time = datetime.now()
 
         try:
             dir_path = Path(directory)
-            logger.info(f"Starting scan of {directory} (file_type: {file_type})")
+            logger.info(f"Starting scan of {directory} (file_type: {file_type}, clear_cache: {clear_cache})")
+
+            # Clear cache if requested
+            if clear_cache:
+                logger.info("Clearing database cache before scan")
+                await db.clear_all()
 
             # Find all files
             files = FileScanner.find_files(dir_path, file_type)

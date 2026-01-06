@@ -23,11 +23,12 @@ export default function Scanner({ onScanComplete }) {
       await axios.post(`${API_URL}/api/scan`, {
         path: folderPath,
         similarity_threshold: threshold,
-        file_type: fileType
+        file_type: fileType,
+        clear_cache: true
       });
 
       if (onScanComplete) {
-        onScanComplete(folderPath, threshold);
+        onScanComplete(folderPath, threshold, fileType);
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al iniciar el escaneo');

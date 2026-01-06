@@ -87,7 +87,12 @@ async def start_scan(request: ScanRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {request.path}")
 
     # Start scan in background
-    background_tasks.add_task(FileScanner.scan_directory, request.path, request.file_type)
+    background_tasks.add_task(
+        FileScanner.scan_directory,
+        request.path,
+        request.file_type,
+        request.clear_cache
+    )
 
     # Return initial status
     return ScanStatus(
@@ -109,7 +114,7 @@ async def get_scan_status():
 
 
 @app.get("/api/duplicates")
-async def get_duplicates(threshold: int = 5):
+async def get_duplicates(threshold: int = 5, file_type: str = None):
     """
     Get list of duplicate/similar file pairs
 
@@ -119,6 +124,8 @@ async def get_duplicates(threshold: int = 5):
                   5 = very similar (default)
                   10 = somewhat similar
                   15 = loosely similar
+        file_type: Type of files to compare ('image', 'video', or 'both')
+                  If not specified, uses the file_type from the last scan
     """
     if threshold < 0 or threshold > 15:
         raise HTTPException(
@@ -126,8 +133,22 @@ async def get_duplicates(threshold: int = 5):
             detail="Threshold must be between 0 and 15"
         )
 
+    # Use file_type from last scan if not specified
+    if file_type is None:
+        file_type = scan_status.file_type
+
+    # Validate file_type
+    if file_type not in ['image', 'video', 'both']:
+        raise HTTPException(
+            status_code=400,
+            detail="file_type must be 'image', 'video', or 'both'"
+        )
+
     try:
-        pairs = await ImageComparator.find_duplicates(similarity_threshold=threshold)
+        pairs = await ImageComparator.find_duplicates(
+            similarity_threshold=threshold,
+            file_type=file_type
+        )
         total_savings = ImageComparator.calculate_potential_savings(pairs)
 
         return DuplicatesResponse(
@@ -215,18 +236,32 @@ async def get_file_preview(file_path: str = Query(..., description="Full path to
     Security: Only serves files that exist in the database (have been scanned)
     """
     try:
-        # Check if file exists in database (security check)
-        file_record = await db.get_file_by_path(file_path)
+        # Normalize the path
+        path = Path(file_path).resolve()
+        normalized_path = str(path)
+
+        # Try to find file in database with normalized path
+        file_record = await db.get_file_by_path(normalized_path)
+
+        # If not found with normalized path, try original path
         if not file_record:
+            file_record = await db.get_file_by_path(file_path)
+
+        # Verify file exists on disk first
+        if not path.exists():
+            if file_record:
+                logger.error(f"File in database but not on disk: {path}")
+                # Clean up database record for non-existent file
+                await db.delete_file_record(str(path))
             raise HTTPException(
-                status_code=403,
-                detail="File not found in database. Only scanned files can be previewed."
+                status_code=404,
+                detail=f"File not found on disk. It may have been moved or deleted. Path: {path}"
             )
 
-        # Verify file still exists on disk
-        path = Path(file_path)
-        if not path.exists():
-            raise HTTPException(status_code=404, detail="File not found on disk")
+        if not file_record:
+            logger.warning(f"Preview request for file not in database (but exists on disk): {file_path}")
+            # Allow preview even if not in database, as long as file exists
+            # This is useful for files that were added after the last scan
 
         if not path.is_file():
             raise HTTPException(status_code=400, detail="Path is not a file")

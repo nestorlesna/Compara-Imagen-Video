@@ -104,11 +104,20 @@ class Database:
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in rows]
 
-    async def get_files_with_hashes(self) -> List[Dict]:
-        """Get all files that have computed hashes"""
-        async with self.connection.execute(
-            "SELECT * FROM files WHERE hash IS NOT NULL ORDER BY hash"
-        ) as cursor:
+    async def get_files_with_hashes(self, file_type: str = 'both') -> List[Dict]:
+        """Get all files that have computed hashes
+
+        Args:
+            file_type: 'image', 'video', or 'both' to filter by type
+        """
+        if file_type == 'both':
+            query = "SELECT * FROM files WHERE hash IS NOT NULL ORDER BY hash"
+            params = ()
+        else:
+            query = "SELECT * FROM files WHERE hash IS NOT NULL AND file_type = ? ORDER BY hash"
+            params = (file_type,)
+
+        async with self.connection.execute(query, params) as cursor:
             rows = await cursor.fetchall()
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in rows]

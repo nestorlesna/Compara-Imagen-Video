@@ -20,6 +20,10 @@ class ScanRequest(BaseModel):
         default='both',
         description="Type of files to scan: 'image', 'video', or 'both'"
     )
+    clear_cache: bool = Field(
+        default=True,
+        description="Clear database cache before scanning"
+    )
 
     @field_validator('path')
     @classmethod
@@ -64,6 +68,7 @@ class ScanStatus(BaseModel):
     """Status of ongoing scan operation"""
     is_scanning: bool
     scanned_path: Optional[str] = None
+    file_type: str = 'both'
     total_files: int = 0
     processed_files: int = 0
     current_file: Optional[str] = None

@@ -4,14 +4,31 @@ Una aplicación web para detectar y eliminar imágenes y videos duplicados o sim
 
 ## Características
 
+### Escaneo y Detección
 - 🔍 **Escaneo Recursivo**: Escanea carpetas y todas las subcarpetas
 - 🎯 **Hashing Perceptual**: Encuentra imágenes similares, no solo idénticas
 - 🎬 **Soporte de Videos**: Extrae frames representativos de videos para comparación
+- 🎛️ **Filtro por Tipo**: Busca solo imágenes, solo videos, o ambos
+- 🧹 **Limpieza Automática**: Limpia la base de datos antes de cada escaneo para eliminar registros de archivos borrados
 - 💾 **Caché Inteligente**: Base de datos SQLite almacena resultados para evitar reprocesamiento
-- 🎚️ **Umbral Configurable**: Ajusta la sensibilidad de detección de similitud
-- 🖼️ **Comparación Lado a Lado**: Interfaz visual para comparar y elegir qué archivo conservar
+- 🎚️ **Umbral Configurable**: Ajusta la sensibilidad de detección de similitud (0-15)
+
+### Visualización y Comparación
+- 🖼️ **Comparación Lado a Lado**: Interfaz visual para comparar archivos duplicados
+- 🔍 **Vista Fullscreen**: Click en cualquier imagen/video para ver en pantalla completa
+- 🔎 **Zoom Avanzado**: Zoom con scroll del mouse (50%-500%) y pan/arrastre en imágenes
+- 🎥 **Reproductor Integrado**: Videos con controles y autoplay en modal
+
+### Gestión de Archivos
+- ☑️ **Selección Múltiple**: Checkboxes para marcar varios archivos
+- 🗑️ **Eliminación en Lote**: Elimina múltiples archivos seleccionados de una vez
 - 🔒 **Seguridad**: Previene eliminación accidental fuera del directorio escaneado
-- 📊 **Estadísticas**: Visualiza totales y ahorro potencial de espacio
+- ✅ **Confirmaciones**: Diálogos de confirmación antes de eliminar
+
+### Estadísticas y Reportes
+- 📊 **Estadísticas en Tiempo Real**: Visualiza totales y ahorro potencial de espacio
+- 📈 **Progreso de Escaneo**: Barra de progreso con contador de archivos procesados
+- ⚠️ **Reporte de Errores**: Lista de archivos con problemas durante el escaneo
 
 ## Formatos Soportados
 
@@ -102,39 +119,47 @@ La interfaz web se abrirá en `http://localhost:5173`
    - Ejemplo (Windows): `C:\Users\TuNombre\Imágenes`
    - Ejemplo (Linux/Mac): `/home/tunombre/Imágenes`
 
-2. **Ajustar Umbral de Similitud** (opcional):
+2. **Seleccionar Tipo de Archivo** (opcional):
+   - `Ambos` = Busca imágenes y videos (predeterminado)
+   - `Solo Imágenes` = Busca únicamente archivos de imagen
+   - `Solo Videos` = Busca únicamente archivos de video
+
+3. **Ajustar Umbral de Similitud** (opcional):
    - `0` = Solo archivos idénticos
    - `5` = Muy similares (predeterminado, recomendado)
    - `10` = Algo similares
    - `15` = Similitud flexible
 
-3. **Clic en "Iniciar Escaneo"**: La aplicación:
-   - Escaneará recursivamente todos los archivos
+4. **Clic en "Iniciar Escaneo"**: La aplicación:
+   - Limpiará automáticamente la base de datos (elimina registros de escaneos anteriores)
+   - Escaneará recursivamente todos los archivos del tipo seleccionado
    - Extraerá metadatos y calculará hashes perceptuales
-   - Almacenará resultados en caché en base de datos SQLite
+   - Almacenará resultados en base de datos SQLite
 
-4. **Revisar Resultados**:
+5. **Revisar Resultados**:
    - Ver pares de duplicados lado a lado
+   - Hacer clic en cualquier imagen/video para vista fullscreen con zoom
    - Ver detalles de archivos (tamaño, dimensiones, fechas)
    - Porcentaje de similitud para cada par
 
-5. **Eliminar Archivos**:
-   - Clic en "Eliminar Este Archivo" bajo el archivo que deseas eliminar
+6. **Eliminar Archivos**:
+   - **Opción 1 - Individual**: Clic en "Eliminar Este Archivo" bajo el archivo específico
+   - **Opción 2 - Por Lote**: Marcar checkboxes de múltiples archivos y clic en "Eliminar Seleccionados"
    - Confirmar la eliminación
-   - El archivo se elimina permanentemente del disco
+   - Los archivos se eliminan permanentemente del disco y de la base de datos
 
 ## Endpoints de la API
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | GET | `/` | Información de la API |
-| POST | `/api/scan` | Iniciar escaneo de directorio |
+| POST | `/api/scan` | Iniciar escaneo de directorio (parámetros: `path`, `similarity_threshold`, `file_type`, `clear_cache`) |
 | GET | `/api/scan/status` | Obtener progreso del escaneo |
-| GET | `/api/duplicates?threshold=5` | Obtener pares de duplicados |
+| GET | `/api/duplicates?threshold=5&file_type=both` | Obtener pares de duplicados filtrados por tipo |
 | POST | `/api/delete` | Eliminar un archivo |
 | GET | `/api/stats` | Obtener estadísticas de la base de datos |
 | GET | `/api/preview?file_path=<ruta>` | Servir archivo para vista previa (imágenes/videos) |
-| DELETE | `/api/cache` | Limpiar caché (reiniciar) |
+| DELETE | `/api/cache` | Limpiar caché manualmente |
 
 ## Configuración
 
@@ -251,11 +276,20 @@ hamming_distance = count_ones(difference)  # = 1
 
 ### Estrategia de Caché (Implementación en `backend/database.py`)
 
-Para evitar reprocesamiento:
+Para optimizar el rendimiento y mantener la integridad de datos:
+
+#### Limpieza Automática
+- **Por defecto**: Cada escaneo limpia completamente la base de datos antes de comenzar
+- **Ventaja**: Elimina registros de archivos que fueron borrados manualmente del disco
+- **Configurable**: Se puede desactivar enviando `clear_cache: false` en la petición de escaneo
+
+#### Caché de Hashes (cuando clear_cache=false)
 1. Después de calcular un hash, lo almacena en SQLite con metadatos del archivo
 2. Antes de recalcular, verifica si cambió el timestamp `modified_at` del archivo
 3. Si no cambió, reutiliza el hash en caché (**~1000x más rápido**)
 4. El esquema de base de datos incluye columnas `hash` y `path` indexadas
+
+**Recomendación**: Mantener `clear_cache: true` (predeterminado) para evitar inconsistencias si se modifican archivos fuera de la aplicación.
 
 ### Librerías Utilizadas
 
@@ -295,8 +329,16 @@ Para evitar reprocesamiento:
 
 ### Las imágenes o videos no se muestran
 
-**Problema**: Los archivos no aparecen en la vista previa
-**Solución**: Asegúrate de que el archivo exista en la base de datos (fue parte de un escaneo). El endpoint `/api/preview` solo sirve archivos escaneados por seguridad.
+**Problema**: Error 404 "File not found on disk" para archivos en pares duplicados
+**Causas posibles**:
+- Los archivos fueron borrados manualmente fuera de la aplicación
+- Los archivos fueron movidos a otra ubicación
+- El escaneo anterior contiene referencias a archivos que ya no existen
+
+**Solución**:
+1. **Hacer un nuevo escaneo** de la carpeta - esto limpiará automáticamente los registros antiguos
+2. La aplicación ahora limpia la base de datos automáticamente antes de cada escaneo
+3. Los registros de archivos inexistentes se eliminan automáticamente cuando se intenta acceder a ellos
 
 ### El escaneo tarda demasiado
 
@@ -366,11 +408,12 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ## Mejoras Futuras
 
 - Detección de rotación/volteo
-- Operaciones de eliminación por lotes
 - Exportar resultados a CSV
 - Funcionalidad de deshacer eliminación
 - Escaneo multi-hilo
 - Persistencia de progreso entre sesiones
+- Comparación de múltiples frames en videos (no solo el frame del medio)
+- Opción para mover archivos a papelera en lugar de eliminar permanentemente
 
 ## Licencia
 

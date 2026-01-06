@@ -12,16 +12,18 @@ function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanBasePath, setScanBasePath] = useState('');
   const [currentThreshold, setCurrentThreshold] = useState(5);
+  const [currentFileType, setCurrentFileType] = useState('both');
   const [duplicates, setDuplicates] = useState([]);
   const [totalSavings, setTotalSavings] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [modalFile, setModalFile] = useState(null);
 
-  const handleScanStart = (path, threshold) => {
+  const handleScanStart = (path, threshold, fileType) => {
     setIsScanning(true);
     setScanBasePath(path);
     setCurrentThreshold(threshold);
+    setCurrentFileType(fileType);
     setDuplicates([]);
   };
 
@@ -34,7 +36,10 @@ function App() {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/api/duplicates`, {
-        params: { threshold: currentThreshold }
+        params: {
+          threshold: currentThreshold,
+          file_type: currentFileType
+        }
       });
       setDuplicates(response.data.pairs);
       setTotalSavings(response.data.total_potential_savings_mb);
